@@ -11,32 +11,49 @@ class UIBuilder:
         st.markdown(
             """
             <style>
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+                html, body, [class*="css"] {
+                    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                }
+
                 #MainMenu {visibility: hidden;}
                 header {visibility: hidden;}
                 footer {visibility: hidden;}
+
                 .block-container {
                     padding-top: 2rem !important;
                     padding-bottom: 2rem !important;
                     max-width: 1200px;
                 }
+
+                /* Tema escuro BLACKBOX */
+                .stApp {
+                    background-color: #0a0a0a;
+                }
+
+                /* Métricas */
                 div[data-testid="metric-container"] {
-                    background-color: #1E1E1E;
-                    border-radius: 8px;
+                    background-color: #141414;
+                    border-radius: 4px;
                     padding: 15px 20px;
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-                    border-left: 4px solid #FF4B4B;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+                    border-left: 4px solid #f97316;
                 }
                 div[data-testid="metric-container"] label {
                     color: #A0A0A0 !important;
                     font-weight: 600;
-                    font-size: 0.9rem;
+                    font-size: 0.8rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.08em;
                 }
                 div[data-testid="metric-container"] div[data-testid="stMetricValue"] {
                     color: #FAFAFA !important;
                     font-size: 1.8rem;
-                    font-weight: bold;
+                    font-weight: 700;
                 }
-                
+
+                /* Radio buttons - estilo tabs */
                 div[data-testid="stRadio"] > div {
                     display: flex;
                     flex-direction: row;
@@ -49,7 +66,7 @@ class UIBuilder:
                 div[role="radiogroup"] label[data-baseweb="radio"] {
                     background-color: #1A1C20;
                     border: 1px solid #2B2E33;
-                    border-radius: 6px !important;
+                    border-radius: 4px !important;
                     padding: 6px 16px;
                     margin: 0;
                     cursor: pointer;
@@ -58,15 +75,31 @@ class UIBuilder:
                 div[role="radiogroup"] label[data-baseweb="radio"] p {
                     color: #7B828A;
                     font-weight: 600;
-                    font-size: 0.90rem;
+                    font-size: 0.8rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
                     margin: 0;
                 }
                 div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) {
-                    background-color: #212E48 !important;
-                    border: 1px solid #3361A6 !important;
+                    background-color: rgba(249,115,22,0.15) !important;
+                    border: 1px solid #f97316 !important;
                 }
                 div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) p {
-                    color: #AECBFA !important;
+                    color: #f97316 !important;
+                }
+
+                /* Tipografia geral */
+                h1, h2, h3, h4, h5, h6 {
+                    font-family: 'Inter', sans-serif;
+                    font-weight: 600;
+                    letter-spacing: -0.02em;
+                }
+                .stMarkdown p, .stMarkdown span, .stMarkdown div {
+                    font-family: 'Inter', sans-serif;
+                }
+                .stCaption {
+                    color: #A0A0A0 !important;
+                    font-size: 0.8rem;
                 }
             </style>
             """,
@@ -93,7 +126,7 @@ class UIBuilder:
             buffett_indicator = (latest_mcap / gdp_trillions) * 100
             deviation_pp = buffett_indicator - FAIR_VALUE_LIMIT
 
-            pp_color = "#FF4B4B" if deviation_pp > 0 else "#A0A0A0"
+            pp_color = "#f97316" if deviation_pp > 0 else "#A0A0A0"
             pp_arrow = "▲" if deviation_pp > 0 else "▼"
 
             with cols[i]:
@@ -104,10 +137,8 @@ class UIBuilder:
                     delta_color="inverse"
                 )
                 st.markdown(
-                    f'<div style="font-size:0.78rem;color:#A0A0A0;margin-top:-10px;padding-bottom:6px">'
-                    f'<span style="font-family:monospace">'
+                    f'<div style="font-size:0.75rem;color:#A0A0A0;margin-top:-10px;padding-bottom:6px;font-family:monospace;">'
                     f'${latest_mcap:.2f}T ÷ ${gdp_trillions:.2f}T = {buffett_indicator:.1f}%'
-                    f'</span>'
                     f'&nbsp;&nbsp;'
                     f'<span style="color:{pp_color};font-weight:bold">'
                     f'{deviation_pp:+.1f}pp {pp_arrow}'
@@ -125,20 +156,22 @@ class UIBuilder:
                     margin-top: 25px;
                     margin-bottom: 25px;
                     text-align: center;
-                    font-size: 0.85rem;
-                    background-color: #1E1E1E;
-                    border-radius: 8px;
+                    font-size: 0.75rem;
+                    background-color: #141414;
+                    border-radius: 4px;
                     overflow: hidden;
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
                 }
                 .buffett-table th, .buffett-table td {
-                    border: 1px solid #333;
+                    border: 1px solid #2B2E33;
                     padding: 10px;
                 }
                 .buffett-table th {
-                    background-color: #2B2B2B;
+                    background-color: #1A1C20;
                     color: #A0A0A0;
                     font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
                 }
                 .buffett-table td {
                     color: #FAFAFA;
@@ -166,7 +199,6 @@ class UIBuilder:
 
     @staticmethod
     def render_pe_section(df_pe: pd.Series) -> None:
-        """Renderiza o gráfico e as métricas do P/L (Price/Earnings) Agregado Real."""
         if df_pe is None or df_pe.empty:
             st.warning("⚠️ Dados do P/L do NASDAQ-100 indisponíveis no momento.")
             return
@@ -180,9 +212,9 @@ class UIBuilder:
             y=df_pe.values,
             mode="lines",
             name="P/L Ratio",
-            line=dict(width=2, color="#00BFFF"),
+            line=dict(width=2, color="#f97316"),
             fill="tozeroy",
-            fillcolor="rgba(0, 191, 255, 0.1)"
+            fillcolor="rgba(249, 115, 22, 0.1)"
         ))
 
         fig.update_layout(
@@ -193,7 +225,8 @@ class UIBuilder:
             yaxis_title="Índice P/L",
             hovermode="x unified",
             margin=dict(l=20, r=20, t=40, b=20),
-            height=350
+            height=350,
+            font=dict(family="Inter, sans-serif")
         )
 
         st.plotly_chart(fig, use_container_width=True)
@@ -217,7 +250,7 @@ class UIBuilder:
 
         fig = go.Figure()
 
-        index_colors = ["#FF4B4B", "#00BFFF", "#A0A0A0"]
+        index_colors = ["#f97316", "#00BFFF", "#A0A0A0"]
         for i, column in enumerate(df_indices.columns):
             fig.add_trace(go.Scatter(
                 x=df_indices.index,
@@ -243,7 +276,7 @@ class UIBuilder:
         annotations = []
         if os.path.exists(csv_path):
             df_ai = pd.read_csv(csv_path, parse_dates=["Date"])
-            color_map = {"Claude": "#FFA500", "Gemini": "#0088FF", "GPT": "#E0E0E0"}
+            color_map = {"Claude": "#f97316", "Gemini": "#0088FF", "GPT": "#E0E0E0"}
 
             for _, row in df_ai.iterrows():
                 if row["Date"] < df_indices.index[0] or row["Date"] > df_indices.index[-1]:
@@ -266,7 +299,8 @@ class UIBuilder:
                 annotations.append(dict(
                     x=row["Date"], y=anchor_y, text=f"  🚀 <b>{row['Feature']}</b>",
                     showarrow=False, xanchor="left", yanchor="middle",
-                    font=dict(color=marker_color, size=11), bgcolor="rgba(14,17,23,0.6)", borderpad=3
+                    font=dict(color=marker_color, size=11, family="Inter, sans-serif"),
+                    bgcolor="rgba(14,17,23,0.6)", borderpad=3
                 ))
 
         fig.update_layout(
@@ -274,8 +308,9 @@ class UIBuilder:
             title="Evolução de Mercado (Trilhões USD) vs Eventos de Inteligência Artificial",
             xaxis_title="", yaxis_title="Trilhões de Dólares (US$)", hovermode="x unified",
             annotations=annotations,
-            legend=dict(orientation="v", xanchor="right", x=-0.02, yanchor="middle", y=0.5, bgcolor="rgba(30,30,30,0.85)", bordercolor="rgba(255,255,255,0.1)", borderwidth=1, font=dict(size=11)),
-            margin=dict(l=20, r=20, t=60, b=0)
+            legend=dict(orientation="v", xanchor="right", x=-0.02, yanchor="middle", y=0.5, bgcolor="rgba(20,20,20,0.9)", bordercolor="rgba(255,255,255,0.1)", borderwidth=1, font=dict(size=11, family="Inter, sans-serif")),
+            margin=dict(l=20, r=20, t=60, b=0),
+            font=dict(family="Inter, sans-serif")
         )
 
         st.plotly_chart(fig, use_container_width=True)
@@ -304,7 +339,7 @@ class UIBuilder:
             return
 
         st.markdown("<br>", unsafe_allow_html=True)
-        color_map_stocks = {"NVDA": "#76B900", "MSFT": "#00A4EF", "GOOGL": "#F4B400"}
+        color_map_stocks = {"NVDA": "#76B900", "MSFT": "#00A4EF", "GOOGL": "#f97316"}
         dias_map = {"1W": 7, "3W": 21, "6W": 42}
 
         for _, row in eventos_recentes.iterrows():
@@ -313,8 +348,8 @@ class UIBuilder:
             with col1:
                 st.markdown(
                     f"""
-                    <div style="width:40px; height:40px; background-color:#1E1E1E; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#A0A0A0; font-size:10px; font-weight:bold; border: 1px solid #444; margin-top:20px;">
-                        IMG<br>{row['AI_Type'][:3].upper()}
+                    <div style="width:40px; height:40px; background-color:#141414; border-radius:4px; display:flex; align-items:center; justify-content:center; color:#A0A0A0; font-size:9px; font-weight:bold; border: 1px solid #2B2E33; margin-top:20px; font-family:monospace; text-transform:uppercase;">
+                        {row['AI_Type'][:3]}
                     </div>
                     """, 
                     unsafe_allow_html=True
@@ -324,7 +359,7 @@ class UIBuilder:
                 head_col_left, head_col_right = st.columns([0.7, 0.3])
                 
                 with head_col_left:
-                    st.markdown(f"**{row['Feature']}** <span style='color:#888; font-size: 0.9em'>· {row['Date'].strftime('%d/%m/%Y')}</span>", unsafe_allow_html=True)
+                    st.markdown(f"**{row['Feature']}** <span style='color:#A0A0A0; font-size: 0.85em'>· {row['Date'].strftime('%d/%m/%Y')}</span>", unsafe_allow_html=True)
                 
                 with head_col_right:
                     tempo_selecionado = st.radio(
@@ -344,7 +379,7 @@ class UIBuilder:
                 
                 if df_period.empty:
                     st.caption("Sem dados de mercado (futuro ou feriado) para este período.")
-                    st.markdown("<hr style='margin: 10px 0; border-color: #333;'>", unsafe_allow_html=True)
+                    st.markdown("<hr style='margin: 10px 0; border-color: #2B2E33;'>", unsafe_allow_html=True)
                     continue
                     
                 df_normalized = (df_period / df_period.iloc[0] - 1) * 100
@@ -374,9 +409,11 @@ class UIBuilder:
                         yanchor="bottom",
                         y=1.02,
                         xanchor="right",
-                        x=1
-                    )
+                        x=1,
+                        font=dict(family="Inter, sans-serif")
+                    ),
+                    font=dict(family="Inter, sans-serif")
                 )
                 
                 st.plotly_chart(fig, use_container_width=True)
-                st.markdown("<hr style='margin: 5px 0 15px 0; border-color: #333;'>", unsafe_allow_html=True)
+                st.markdown("<hr style='margin: 5px 0 15px 0; border-color: #2B2E33;'>", unsafe_allow_html=True)
