@@ -4,3 +4,5 @@ numpy>=1.26.0
 yfinance>=0.2.40
 plotly>=5.22.0
 requests>=2.31.0
+cairosvg>=2.7.0
+pillow>=10.0.0
