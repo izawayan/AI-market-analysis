@@ -1,4 +1,62 @@
 Date,Feature,AI_Type
+2023-03-01,GPT-3.5 Turbo,GPT
+2023-03-14,GPT-4,GPT
+2023-03-14,Claude 1,Claude
+2023-07-11,Claude 2,Claude
+2023-11-06,GPT-4 Turbo,GPT
+2023-11-21,Claude 2.1,Claude
+2023-12-06,Gemini 1.0 (anúncio),Gemini
+2024-02-01,Gemini Pro 1.0,Gemini
+2024-02-01,Gemini Nano 1.0,Gemini
+2024-02-08,Gemini Ultra 1.0,Gemini
+2024-02-15,Gemini 1.5 Pro (prévia),Gemini
+2024-03-04,Claude 3 Sonnet,Claude
+2024-03-04,Claude 3 Opus,Claude
+2024-03-13,Claude 3 Haiku,Claude
+2024-05-01,Gemini 1.5 Flash,Gemini
+2024-05-01,Gemini 1.5 Pro (I/O),Gemini
+2024-05-13,GPT-4o,GPT
+2024-06-20,Claude Sonnet 3.5,Claude
+2024-07-18,GPT-4o mini,GPT
+2024-09-24,Gemini 1.5 Flash-002,Gemini
+2024-09-24,Gemini 1.5 Pro-002,Gemini
+2024-10-01,Claude Haiku 3.5,Claude
+2024-10-22,Claude Sonnet 3.5 (new),Claude
+2024-12-11,Gemini 2.0 Flash,Gemini
+2024-12-11,Gemini 2.0,Gemini
+2025-01-01,Gemini 2.5 Flash-Lite,Gemini
+2025-02-01,Claude Sonnet 3.7,Claude
+2025-05-22,Claude Sonnet 4,Claude
+2025-05-22,Claude Opus 4,Claude
+2025-06-01,Gemini 2.5 Pro,Gemini
+2025-06-01,Gemini 2.5 Flash,Gemini
+2025-08-01,Claude Opus 4.1,Claude
+2025-09-01,Claude Sonnet 4.5,Claude
+2025-10-01,Claude Haiku 4.5,Claude
 2025-10-15,GPT-5,GPT
+2025-11-01,Claude Opus 4.5,Claude
+2025-11-18,Gemini 3,Gemini
+2025-11-18,Gemini 3 Pro,Gemini
+2025-12-01,Gemini 2.5 Flash Live,Gemini
+2026-02-01,Claude Opus 4.6,Claude
+2026-02-01,Gemini 3.1 Pro,Gemini
+2026-02-01,Claude Sonnet 4.6,Claude
 2026-02-10,Gemini 3.1,Gemini
-2026-05-20,Claude Opus 4,Claude
+2026-02-19,Gemini 3.1 Flash Live (prévia),Gemini
+2026-03-03,GPT-5.3 Instant,GPT
+2026-03-05,GPT-5.4 Thinking,GPT
+2026-03-05,GPT-5.4 Pro,GPT
+2026-03-17,GPT-5.4 mini,GPT
+2026-04-17,Claude Opus 4.7,Claude
+2026-05-01,Claude Opus 4.8,Claude
+2026-05-05,GPT-5.5 Instant,GPT
+2026-05-19,Gemini 3.5 Flash (GA),Gemini
+2026-05-20,Gemini 3.5 Flash (apresentação),Gemini
+2026-06-01,Claude Sonnet 5,Claude
+2026-06-09,Claude Mythos 5,Claude
+2026-06-09,Claude Fable 5,Claude
+2026-06-26,GPT-5.6 Sol,GPT
+2026-06-30,Gemini Omni Flash (prévia pública),Gemini
+2026-07-21,Gemini 3.5 Flash Cyber,Gemini
+2026-07-21,Gemini 3.5 Flash-Lite,Gemini
+2026-07-21,Gemini 3.6 Flash,Gemini

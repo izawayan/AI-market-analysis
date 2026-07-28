@@ -181,7 +181,7 @@ class UIBuilder:
                 <tr>
                     <th>Abaixo de 70%</th>
                     <th>De 75% a 90%</th>
-                    <th>De 90% a 115%</th>
+                    <th>De 90% a 110%</th>
                     <th>De 115% a 150%</th>
                     <th>Acima de 150%</th>
                 </tr>
