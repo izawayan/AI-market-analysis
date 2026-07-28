@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -27,12 +28,10 @@ class UIBuilder:
                     max-width: 1200px;
                 }
 
-                /* Tema escuro BLACKBOX */
                 .stApp {
                     background-color: #0a0a0a;
                 }
 
-                /* Métricas */
                 div[data-testid="metric-container"] {
                     background-color: #141414;
                     border-radius: 4px;
@@ -53,7 +52,6 @@ class UIBuilder:
                     font-weight: 700;
                 }
 
-                /* Radio buttons - estilo tabs */
                 div[data-testid="stRadio"] > div {
                     display: flex;
                     flex-direction: row;
@@ -61,7 +59,7 @@ class UIBuilder:
                     background-color: transparent;
                 }
                 div[role="radiogroup"] label[data-baseweb="radio"] div:first-child {
-                    display: none !important; 
+                    display: none !important;
                 }
                 div[role="radiogroup"] label[data-baseweb="radio"] {
                     background-color: #1A1C20;
@@ -88,7 +86,6 @@ class UIBuilder:
                     color: #f97316 !important;
                 }
 
-                /* Tipografia geral */
                 h1, h2, h3, h4, h5, h6 {
                     font-family: 'Inter', sans-serif;
                     font-weight: 600;
@@ -146,7 +143,7 @@ class UIBuilder:
                     f'</div>',
                     unsafe_allow_html=True
                 )
-        
+
         st.markdown(
             """
             <style>
@@ -181,7 +178,7 @@ class UIBuilder:
                 <tr>
                     <th>Abaixo de 70%</th>
                     <th>De 75% a 90%</th>
-                    <th>De 90% a 110%</th>
+                    <th>De 90% a 115%</th>
                     <th>De 115% a 150%</th>
                     <th>Acima de 150%</th>
                 </tr>
@@ -328,9 +325,9 @@ class UIBuilder:
         if not os.path.exists(csv_path):
             st.info("Arquivo de eventos (ai_features.csv) não encontrado.")
             return
-            
+
         df_ai = pd.read_csv(csv_path, parse_dates=["Date"])
-        
+
         df_ai_sorted = df_ai.sort_values("Date", ascending=False)
         eventos_recentes = df_ai_sorted.drop_duplicates(subset=["AI_Type"]).head(3)
 
@@ -344,23 +341,23 @@ class UIBuilder:
 
         for _, row in eventos_recentes.iterrows():
             col1, col2 = st.columns([0.6, 11.4])
-            
+
             with col1:
                 st.markdown(
                     f"""
                     <div style="width:40px; height:40px; background-color:#141414; border-radius:4px; display:flex; align-items:center; justify-content:center; color:#A0A0A0; font-size:9px; font-weight:bold; border: 1px solid #2B2E33; margin-top:20px; font-family:monospace; text-transform:uppercase;">
                         {row['AI_Type'][:3]}
                     </div>
-                    """, 
+                    """,
                     unsafe_allow_html=True
                 )
-                
+
             with col2:
                 head_col_left, head_col_right = st.columns([0.7, 0.3])
-                
+
                 with head_col_left:
                     st.markdown(f"**{row['Feature']}** <span style='color:#A0A0A0; font-size: 0.85em'>· {row['Date'].strftime('%d/%m/%Y')}</span>", unsafe_allow_html=True)
-                
+
                 with head_col_right:
                     tempo_selecionado = st.radio(
                         f"Janela_{row['Feature']}",
@@ -369,21 +366,21 @@ class UIBuilder:
                         label_visibility="collapsed",
                         key=f"radio_{row['Feature']}"
                     )
-                
+
                 dias_janela = dias_map[tempo_selecionado]
                 start_date = row['Date']
                 end_date = start_date + pd.Timedelta(days=dias_janela)
-                
+
                 mask = (df_tech.index >= start_date) & (df_tech.index <= end_date)
                 df_period = df_tech.loc[mask]
-                
+
                 if df_period.empty:
                     st.caption("Sem dados de mercado (futuro ou feriado) para este período.")
                     st.markdown("<hr style='margin: 10px 0; border-color: #2B2E33;'>", unsafe_allow_html=True)
                     continue
-                    
+
                 df_normalized = (df_period / df_period.iloc[0] - 1) * 100
-                
+
                 fig = go.Figure()
                 for ticker in df_normalized.columns:
                     if ticker in color_map_stocks:
@@ -394,7 +391,7 @@ class UIBuilder:
                             name=ticker,
                             line=dict(width=2, color=color_map_stocks[ticker])
                         ))
-                        
+
                 fig.update_layout(
                     template="plotly_dark",
                     paper_bgcolor="rgba(0,0,0,0)",
@@ -414,6 +411,167 @@ class UIBuilder:
                     ),
                     font=dict(family="Inter, sans-serif")
                 )
-                
+
                 st.plotly_chart(fig, use_container_width=True)
                 st.markdown("<hr style='margin: 5px 0 15px 0; border-color: #2B2E33;'>", unsafe_allow_html=True)
+
+    # ---------- SEÇÃO DE MONTE CARLO ----------
+    @staticmethod
+    def render_monte_carlo_section() -> None:
+        from src.monte_carlo import carregar_parametros, executar_monte_carlo
+
+        st.header("🎲 Simulação de Monte Carlo – Valuation DCF")
+        st.caption("Análise de sensibilidade do valor intrínseco com base nas premissas do gestor.")
+
+        # Carrega parâmetros (caminho absoluto automático)
+        try:
+            params = carregar_parametros()
+        except FileNotFoundError as e:
+            st.error(str(e))
+            return
+
+        # Barra lateral: controles
+        st.sidebar.header("⚙️ Configurações da Simulação")
+
+        st.sidebar.markdown(
+            """
+            **🔒 Congruência dos Resultados**  
+            Para garantir a reprodutibilidade e congruência dos resultados, 
+            foi definida uma **semente (seed) padrão = 7** para o gerador 
+            de números aleatórios.
+            """
+        )
+
+        excluir_seed = st.sidebar.checkbox(
+            "❌ Excluir seed padrão (resultados aleatórios)",
+            value=False,
+            help="Marque esta opção para gerar números verdadeiramente aleatórios a cada execução. Útil para testes de sensibilidade, mas os resultados não serão reproduzíveis."
+        )
+
+        seed_atual = None if excluir_seed else 7
+
+        if seed_atual is not None:
+            st.sidebar.success(f"✅ Usando seed fixa: **{seed_atual}**")
+        else:
+            st.sidebar.warning("⚠️ Modo aleatório ativado. Os resultados variarão a cada execução.")
+
+        st.sidebar.divider()
+
+        n_base = st.sidebar.slider(
+            "Nº de Simulações (Base - Gestor)",
+            min_value=1000,
+            max_value=100000,
+            value=10000,
+            step=1000,
+            help="Número de iterações para a simulação base. Quanto maior, mais preciso, porém mais lento."
+        )
+
+        n_persp = st.sidebar.slider(
+            "Nº de Simulações (Sua Perspectiva)",
+            min_value=1000,
+            max_value=100000,
+            value=10000,
+            step=1000,
+            help="Número de iterações para a simulação personalizada. Pode ser diferente do slider da base."
+        )
+
+        st.sidebar.divider()
+
+        st.sidebar.header("✏️ Crie sua Própria Perspectiva")
+        wacc_user = st.sidebar.number_input("WACC (%)", min_value=0.0, max_value=0.5, value=0.16, step=0.01, format="%.2f")
+        g_user = st.sidebar.number_input("Crescimento Perpétuo (g) (%)", min_value=0.0, max_value=0.1, value=0.04, step=0.005, format="%.3f")
+
+        if st.sidebar.button("🚀 Aplicar Perspectiva", use_container_width=True):
+            result_persp = executar_monte_carlo(
+                params,
+                n_simulacoes=n_persp,
+                seed=seed_atual,
+                modo='personalizado',
+                wacc_fixo=wacc_user,
+                g_fixo=g_user
+            )
+            st.session_state['result_persp'] = result_persp
+            st.session_state['n_persp'] = n_persp
+
+        @st.cache_data
+        def simular_base(n_sim, seed):
+            return executar_monte_carlo(params, n_simulacoes=n_sim, seed=seed, modo='base')
+
+        result_base = simular_base(n_base, seed_atual)
+        st.session_state['n_base'] = n_base
+        st.session_state['result_base'] = result_base
+
+        st.subheader("📊 Comparação de Cenários")
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown(f"#### Base (Gestor) – {n_base} simulações")
+            if seed_atual is not None:
+                st.caption(f"🔒 Seed fixa: {seed_atual}")
+            else:
+                st.caption("🎲 Resultados aleatórios")
+            UIBuilder._plot_histograma(result_base['dados'], cor="#f97316")
+            st.metric("Mediana", f"R$ {result_base['mediana']:.2f}M")
+            st.caption(f"P5: R$ {result_base['p5']:.2f}M | P95: R$ {result_base['p95']:.2f}M")
+
+        with col2:
+            if 'result_persp' in st.session_state:
+                st.markdown(f"#### Sua Perspectiva – {st.session_state['n_persp']} simulações")
+                if seed_atual is not None:
+                    st.caption(f"🔒 Seed fixa: {seed_atual}")
+                else:
+                    st.caption("🎲 Resultados aleatórios")
+                UIBuilder._plot_histograma(st.session_state['result_persp']['dados'], cor="#00BFFF")
+                st.metric("Mediana", f"R$ {st.session_state['result_persp']['mediana']:.2f}M")
+                st.caption(f"P5: R$ {st.session_state['result_persp']['p5']:.2f}M | P95: R$ {st.session_state['result_persp']['p95']:.2f}M")
+            else:
+                st.info("Clique em 'Aplicar Perspectiva' para comparar.")
+
+        st.divider()
+        st.subheader("📋 Resumo Estatístico")
+        if 'result_persp' in st.session_state:
+            df_compare = pd.DataFrame({
+                "Cenário": ["Base (Gestor)", "Sua Perspectiva"],
+                "Nº Simulações": [n_base, st.session_state['n_persp']],
+                "Seed": [
+                    seed_atual if seed_atual is not None else "Aleatória",
+                    seed_atual if seed_atual is not None else "Aleatória"
+                ],
+                "P5 (R$ M)": [f"{result_base['p5']:.2f}", f"{st.session_state['result_persp']['p5']:.2f}"],
+                "Mediana (R$ M)": [f"{result_base['mediana']:.2f}", f"{st.session_state['result_persp']['mediana']:.2f}"],
+                "P95 (R$ M)": [f"{result_base['p95']:.2f}", f"{st.session_state['result_persp']['p95']:.2f}"]
+            })
+            st.dataframe(df_compare, use_container_width=True)
+        else:
+            st.info("Aplique uma perspectiva para ver a comparação detalhada.")
+
+    @staticmethod
+    def _plot_histograma(dados, cor="#f97316"):
+        p5 = np.percentile(dados, 5)
+        p50 = np.median(dados)
+        p95 = np.percentile(dados, 95)
+
+        fig = go.Figure()
+        fig.add_trace(go.Histogram(
+            x=dados,
+            nbinsx=50,
+            marker_color=cor,
+            opacity=0.7,
+            name="Valuation"
+        ))
+        for p, nome in zip([p5, p50, p95], ["P5", "P50", "P95"]):
+            fig.add_vline(x=p, line_dash="dash", line_color="white",
+                          annotation_text=f"{nome}: {p:.1f}",
+                          annotation_position="top")
+        fig.update_layout(
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            xaxis_title="Valuation (R$ Milhões)",
+            yaxis_title="Frequência",
+            showlegend=False,
+            margin=dict(l=10, r=20, t=20, b=10),
+            height=300,
+            font=dict(family="Inter, sans-serif")
+        )
+        st.plotly_chart(fig, use_container_width=True)

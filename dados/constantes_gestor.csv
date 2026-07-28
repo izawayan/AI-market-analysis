@@ -1,0 +1,4 @@
+Variavel,Minimo,Mais_Provavel,Maximo,Observacao
+WACC,0.12,0.15,0.18,Custo de Capital
+Crescimento_Perpetuo,0.02,0.03,0.05,Crescimento na perpetuidade (g)
+Crescimento_Receita,0.15,0.179,0.22,CAGR da Receita (5 anos)
