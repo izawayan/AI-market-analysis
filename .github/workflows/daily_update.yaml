@@ -1,0 +1,37 @@
+name: Atualização Diária de Dados
+
+on:
+  schedule:
+    - cron: '0 23 * * *'   # Roda todos os dias às 23:00 UTC
+  workflow_dispatch:        # Permite rodar manualmente
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Instalar dependências
+        run: |
+          pip install pandas numpy yfinance requests
+
+      - name: Rodar script de atualização
+        run: python scripts/update_data.py
+
+      - name: Commitar e enviar mudanças
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "🤖 chore: atualização automática dos dados (Daily cron)"
+          file_pattern: "dados/*.csv"
+          push_options: '--force'
+          commit_user_name: "GitHub Action Bot"
+          commit_user_email: "action@github.com"
