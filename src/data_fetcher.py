@@ -182,7 +182,42 @@ class DataFetcher:
         return pe_ratio
 
     # --------------------------------------------------------------
-    # 4. MÉTODO AUXILIAR PARA TECH STOCKS (privado)
+    # 4. AI Events - Agrupamento hierárquico
+    # --------------------------------------------------------------
+    @staticmethod
+    def get_grouped_ai_events() -> dict:
+        """
+        Lê o arquivo dados/ai_features.csv e retorna um dicionário agrupado por AI_Type.
+        Cada chave contém uma lista de eventos com 'feature' e 'date'.
+        Se o arquivo não existir ou estiver vazio, retorna dicionário vazio.
+        """
+        csv_path = "dados/ai_features.csv"
+        if not os.path.exists(csv_path):
+            logging.warning("ai_features.csv não encontrado. Nenhum evento de IA carregado.")
+            return {}
+
+        try:
+            df = pd.read_csv(csv_path, parse_dates=["Date"])
+        except Exception as e:
+            logging.error(f"Erro ao ler ai_features.csv: {e}")
+            return {}
+
+        if df.empty:
+            return {}
+
+        grouped = {}
+        for _, row in df.iterrows():
+            ai_type = row["AI_Type"]
+            if ai_type not in grouped:
+                grouped[ai_type] = []
+            grouped[ai_type].append({
+                "feature": row["Feature"],
+                "date": row["Date"]
+            })
+        return grouped
+
+    # --------------------------------------------------------------
+    # 5. Método auxiliar para Tech Stocks (privado)
     # --------------------------------------------------------------
     @staticmethod
     def _fetch_tech_stocks_data() -> pd.DataFrame:
@@ -198,7 +233,7 @@ class DataFetcher:
         return pd.DataFrame()
 
     # --------------------------------------------------------------
-    # 5. AI Features (opcional, mantido para compatibilidade)
+    # 6. AI Features (opcional, mantido para compatibilidade)
     # --------------------------------------------------------------
     @staticmethod
     def fetch_ai_features():
@@ -231,11 +266,13 @@ class DataFetcher:
     # ==============================================================
     # ALIASES PARA COMPATIBILIDADE COM O main.py
     # ==============================================================
-    fetch_tech_stocks_data = _fetch_tech_stocks_data   # mantém a chamada pública
+    fetch_tech_stocks_data = _fetch_tech_stocks_data
 
-    # (Opcional) Se quiser manter também o antigo nome para GDP:
     @staticmethod
     def fetch_latest_us_gdp() -> float:
+        """
+        Retorna o PIB dos EUA mais recente (em trilhões). Alias para compatibilidade.
+        """
         df = DataFetcher.fetch_macro_data()
         if not df.empty:
             return df["us_gdp_trillions"].iloc[0]

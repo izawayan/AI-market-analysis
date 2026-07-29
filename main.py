@@ -18,7 +18,10 @@ def main():
         df_indices = DataFetcher.fetch_indices_data()
         gdp_trillions = DataFetcher.fetch_macro_data()["us_gdp_trillions"].iloc[0]
         df_pe = DataFetcher.fetch_nasdaq_pe_5y()
-        df_tech = DataFetcher.fetch_tech_stocks_data()  # precisa do alias
+        df_tech = DataFetcher.fetch_tech_stocks_data()
+
+    # Carrega eventos de IA agrupados (já estruturados)
+    ai_events = DataFetcher.get_grouped_ai_events()
 
     st.markdown("### 📊 Market Insights & AI Tracker")
     st.divider()
@@ -32,12 +35,12 @@ def main():
     
     st.divider()
     
-    UIBuilder.render_llm_impact_section(df_tech)
+    # Passa os eventos agrupados para a UI
+    UIBuilder.render_llm_impact_section(df_tech, ai_events)
 
     # NOVA SEÇÃO DE MONTE CARLO
     st.divider()
     UIBuilder.render_monte_carlo_section()
-
 
 if __name__ == "__main__":
     main()

@@ -269,6 +269,7 @@ class UIBuilder:
             showlegend=True
         ))
 
+        # Eventos de IA (lê o CSV diretamente para manter compatibilidade com a legenda)
         csv_path = "dados/ai_features.csv"
         annotations = []
         if os.path.exists(csv_path):
@@ -312,41 +313,55 @@ class UIBuilder:
 
         st.plotly_chart(fig, use_container_width=True)
 
+    # ==============================================================
+    # MÉTODO ATUALIZADO PARA RECEBER EVENTOS AGRUPADOS
+    # ==============================================================
     @staticmethod
-    def render_llm_impact_section(df_tech: pd.DataFrame) -> None:
-        if df_tech.empty:
-            st.warning("⚠️ Dados das Big Techs indisponíveis para análise.")
+    def render_llm_impact_section(df_tech: pd.DataFrame, ai_events: dict) -> None:
+        """
+        Exibe gráficos de impacto pós-release para NVDA, MSFT, GOOGL,
+        com base nos eventos de IA fornecidos (agrupados por AI_Type).
+        """
+        if df_tech.empty or not ai_events:
+            st.warning("⚠️ Dados das Big Techs ou eventos de IA indisponíveis.")
             return
 
         st.subheader("Impacto Pós-Release nas Big Techs")
         st.caption("Análise de volatilidade e performance acumulada para NVDA, MSFT e GOOGL pós-lançamentos de LLMs.")
 
-        csv_path = "dados/ai_features.csv"
-        if not os.path.exists(csv_path):
-            st.info("Arquivo de eventos (ai_features.csv) não encontrado.")
+        # Pega o evento mais recente de cada AI_Type
+        eventos_recentes = []
+        for ai_type, events in ai_events.items():
+            if events:
+                latest = max(events, key=lambda e: e['date'])
+                eventos_recentes.append({
+                    "AI_Type": ai_type,
+                    "Feature": latest['feature'],
+                    "Date": latest['date']
+                })
+
+        if not eventos_recentes:
+            st.info("Nenhum evento de IA registrado.")
             return
 
-        df_ai = pd.read_csv(csv_path, parse_dates=["Date"])
+        # Ordena por data decrescente (mais recente primeiro)
+        eventos_recentes.sort(key=lambda x: x['Date'], reverse=True)
 
-        df_ai_sorted = df_ai.sort_values("Date", ascending=False)
-        eventos_recentes = df_ai_sorted.drop_duplicates(subset=["AI_Type"]).head(3)
-
-        if eventos_recentes.empty:
-            st.info("Nenhum evento de IA registrado no CSV para analisar.")
-            return
-
-        st.markdown("<br>", unsafe_allow_html=True)
         color_map_stocks = {"NVDA": "#76B900", "MSFT": "#00A4EF", "GOOGL": "#f97316"}
         dias_map = {"1W": 7, "3W": 21, "6W": 42}
 
-        for _, row in eventos_recentes.iterrows():
+        for event in eventos_recentes:
+            ai_type = event["AI_Type"]
+            feature = event["Feature"]
+            event_date = event["Date"]
+
             col1, col2 = st.columns([0.6, 11.4])
 
             with col1:
                 st.markdown(
                     f"""
                     <div style="width:40px; height:40px; background-color:#141414; border-radius:4px; display:flex; align-items:center; justify-content:center; color:#A0A0A0; font-size:9px; font-weight:bold; border: 1px solid #2B2E33; margin-top:20px; font-family:monospace; text-transform:uppercase;">
-                        {row['AI_Type'][:3]}
+                        {ai_type[:3]}
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -356,19 +371,19 @@ class UIBuilder:
                 head_col_left, head_col_right = st.columns([0.7, 0.3])
 
                 with head_col_left:
-                    st.markdown(f"**{row['Feature']}** <span style='color:#A0A0A0; font-size: 0.85em'>· {row['Date'].strftime('%d/%m/%Y')}</span>", unsafe_allow_html=True)
+                    st.markdown(f"**{feature}** <span style='color:#A0A0A0; font-size: 0.85em'>· {event_date.strftime('%d/%m/%Y')}</span>", unsafe_allow_html=True)
 
                 with head_col_right:
                     tempo_selecionado = st.radio(
-                        f"Janela_{row['Feature']}",
+                        f"Janela_{feature}",
                         options=["1W", "3W", "6W"],
                         horizontal=True,
                         label_visibility="collapsed",
-                        key=f"radio_{row['Feature']}"
+                        key=f"radio_{feature}"
                     )
 
                 dias_janela = dias_map[tempo_selecionado]
-                start_date = row['Date']
+                start_date = event_date
                 end_date = start_date + pd.Timedelta(days=dias_janela)
 
                 mask = (df_tech.index >= start_date) & (df_tech.index <= end_date)
@@ -415,7 +430,7 @@ class UIBuilder:
                 st.plotly_chart(fig, use_container_width=True)
                 st.markdown("<hr style='margin: 5px 0 15px 0; border-color: #2B2E33;'>", unsafe_allow_html=True)
 
-    # ---------- SEÇÃO DE MONTE CARLO ----------
+    # ---------- SEÇÃO DE MONTE CARLO (não alterada) ----------
     @staticmethod
     def render_monte_carlo_section() -> None:
         from src.monte_carlo import carregar_parametros, executar_monte_carlo
@@ -423,14 +438,12 @@ class UIBuilder:
         st.header("🎲 Simulação de Monte Carlo – Valuation DCF")
         st.caption("Análise de sensibilidade do valor intrínseco com base nas premissas do gestor.")
 
-        # Carrega parâmetros (caminho absoluto automático)
         try:
             params = carregar_parametros()
         except FileNotFoundError as e:
             st.error(str(e))
             return
 
-        # Barra lateral: controles
         st.sidebar.header("⚙️ Configurações da Simulação")
 
         st.sidebar.markdown(
