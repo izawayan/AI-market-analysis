@@ -30,7 +30,7 @@ jobs:
       - name: Commitar e enviar mudanças
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "🤖 chore: atualização automática dos dados (Daily cron)"
+          commit_message: "daily cron"
           file_pattern: "dados/*.csv"
           push_options: '--force'
           commit_user_name: "GitHub Action Bot"
