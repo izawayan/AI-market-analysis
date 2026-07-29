@@ -26,10 +26,17 @@ GDP_FALLBACK_TRILLIONS = 27.36
 
 class DataFetcher:
 
-    @st.cache_data(ttl=3600, persist="disk")
-    def fetch_indices_last_12m() -> pd.DataFrame:
+    # --------------------------------------------------------------
+    # 1. ÍNDICES (Wilshire 5000 e NASDAQ) - Últimos 5 anos
+    # --------------------------------------------------------------
+    @staticmethod
+    def fetch_indices_data() -> pd.DataFrame:
+        """
+        Baixa os dados de Wilshire 5000 e NASDAQ Composite dos últimos 5 anos.
+        Salva em 'dados/indices.csv'.
+        """
         end_date = datetime.today()
-        start_date = end_date - timedelta(days=365)
+        start_date = end_date - timedelta(days=5*365)
 
         df_list = []
         for name, ticker in TICKERS.items():
@@ -40,7 +47,6 @@ class DataFetcher:
                         close_series = data["Close"].iloc[:, 0]
                     else:
                         close_series = data["Close"]
-
                     mcap_series = close_series * MARKET_CAP_MULTIPLIERS[name]
                     df_list.append(pd.Series(mcap_series, name=name))
                 else:
@@ -50,53 +56,79 @@ class DataFetcher:
 
         if df_list:
             df = pd.concat(df_list, axis=1)
-            return df.ffill().dropna()
+            df = df.ffill().dropna()
+            os.makedirs("dados", exist_ok=True)
+            df.to_csv("dados/indices.csv")
+            logging.info("indices.csv atualizado com sucesso!")
+            return df
 
+        logging.warning("Falha ao atualizar índices. Retornando DataFrame vazio.")
         return pd.DataFrame()
 
-    @st.cache_data(ttl=86400, persist="disk")
-    def fetch_latest_us_gdp() -> float:
+    # --------------------------------------------------------------
+    # 2. PIB dos EUA (último valor disponível)
+    # --------------------------------------------------------------
+    @staticmethod
+    def fetch_macro_data() -> pd.DataFrame:
+        """
+        Busca o PIB dos EUA mais recente (World Bank API) e salva em 'dados/macro.csv'.
+        Retorna um DataFrame com data e valor (em trilhões).
+        """
         try:
             url = "https://api.worldbank.org/v2/country/US/indicator/NY.GDP.MKTP.CD?format=json"
             response = requests.get(url, timeout=10)
             response.raise_for_status()
             data = response.json()
 
+            gdp_trillions = None
             if isinstance(data, list) and len(data) > 1:
                 for entry in data[1]:
                     if entry.get("value") is not None:
-                        return float(entry["value"]) / 1e12
+                        gdp_trillions = float(entry["value"]) / 1e12
+                        break
+
+            if gdp_trillions is None:
+                logging.warning("Nenhum valor de PIB encontrado. Usando fallback.")
+                gdp_trillions = GDP_FALLBACK_TRILLIONS
 
         except Exception as e:
             logging.error(f"Erro ao buscar PIB: {e}")
+            gdp_trillions = GDP_FALLBACK_TRILLIONS
+            logging.warning(f"Usando fallback: US$ {gdp_trillions} T")
 
-        logging.warning(f"Usando fallback de PIB: US$ {GDP_FALLBACK_TRILLIONS} T")
-        return GDP_FALLBACK_TRILLIONS
+        df = pd.DataFrame({
+            "data": [datetime.today().strftime("%Y-%m-%d")],
+            "us_gdp_trillions": [gdp_trillions]
+        })
+        os.makedirs("dados", exist_ok=True)
+        df.to_csv("dados/macro.csv", index=False)
+        logging.info("macro.csv atualizado com sucesso!")
+        return df
 
+    # --------------------------------------------------------------
+    # 3. NASDAQ P/E (últimos 5 anos)
+    # --------------------------------------------------------------
     @staticmethod
     def fetch_nasdaq_pe_5y() -> pd.Series:
         """
-        Calcula o P/L agregado (Market Cap Total / Lucro Líquido Total) 
-        das 100 empresas do NASDAQ para os últimos 5 anos.
+        Calcula o P/L agregado do NASDAQ-100 para os últimos 5 anos.
+        Salva em 'dados/nasdaq_pe.csv'.
         """
-        csv_path = "dados/nasdaq_pe_5y.csv"
-        
-        # 1. Regra de Cache: O usuário não precisa atualizar se o CSV for mais novo que 4 semanas (28 dias)
+        csv_path = "dados/nasdaq_pe.csv"
+
         if os.path.exists(csv_path):
             try:
                 df_pe = pd.read_csv(csv_path, index_col=0, parse_dates=True)
                 if not df_pe.empty:
                     last_date = df_pe.index[-1]
-                    if (datetime.today() - last_date).days <= 28:
+                    if (datetime.today() - last_date).days <= 1:
                         return df_pe["PE_Ratio"]
             except Exception as e:
                 logging.error(f"Erro ao ler CSV do PE: {e}")
 
-        # Se não existe ou passou de 4 semanas, avisa na tela e começa a varredura
-        st.toast("Calculando lucros reais de todas as empresas do NASDAQ-100 (5 anos). Isso levará alguns minutos...", icon="🔄")
+        st.toast("Calculando P/L do NASDAQ-100 (5 anos). Isso pode levar alguns minutos...", icon="🔄")
         
         try:
-            # Captura a lista de tickers atualizados do NDX-100 via Wikipedia
             tables = pd.read_html('https://en.wikipedia.org/wiki/Nasdaq-100')
             tickers = []
             for df in tables:
@@ -107,29 +139,23 @@ class DataFetcher:
                 raise ValueError("Tabela não encontrada.")
             tickers = [str(t).replace('.', '-') for t in tickers]
         except Exception:
-            # Fallback seguro com as Big Techs caso o scraping da wiki falhe
             tickers = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA", "AVGO", "PEP", "COST", "CSCO", "ADBE"]
 
         end_date = datetime.today()
         start_date = end_date - timedelta(days=5*365)
         
-        # Baixa os preços de todas as empresas de uma vez (Otimização de rede)
         df_prices = yf.download(tickers, start=start_date, end=end_date, progress=False)["Close"]
         
         total_mcap = pd.Series(0.0, index=df_prices.index)
         total_earnings = pd.Series(0.0, index=df_prices.index)
         
-        # Itera sobre cada empresa para calcular o lucro
         for t in tickers:
             try:
                 stock = yf.Ticker(t)
                 info = stock.info
                 shares = info.get("sharesOutstanding")
-                
                 if not shares or t not in df_prices.columns:
                     continue
-                    
-                # Capitalização da empresa (Preço * Ações em Circulação)
                 mcap = df_prices[t] * shares
                 total_mcap = total_mcap.add(mcap, fill_value=0)
                 
@@ -140,38 +166,77 @@ class DataFetcher:
                         df_ni = net_income.to_frame(name='NI')
                         df_ni.index = pd.to_datetime(df_ni.index)
                         df_ni = df_ni.sort_index()
-                        
-                        # Forward fill: o lucro do ano fiscal passado é usado todos os dias até sair o novo
                         daily_ni = df_ni.reindex(df_prices.index, method='ffill').bfill()
                         total_earnings = total_earnings.add(daily_ni['NI'], fill_value=0)
             except Exception:
                 continue
                 
-        # Calcula o Price-to-Earnings agregado do Índice
         pe_ratio = total_mcap / total_earnings
         pe_ratio.name = "PE_Ratio"
         pe_ratio = pe_ratio.replace([float('inf'), float('-inf')], pd.NA).dropna()
-        
-        # Filtro de sanidade para excluir distorções gigantes em anos de prejuízo generalizado
         pe_ratio = pe_ratio[(pe_ratio > 0) & (pe_ratio < 200)]
         
-        # Salva o arquivo CSV atualizado
         os.makedirs("dados", exist_ok=True)
         pe_ratio.to_csv(csv_path)
-        
+        logging.info("nasdaq_pe.csv atualizado com sucesso!")
         return pe_ratio
 
-    @st.cache_data(ttl=3600, persist="disk")
-    def fetch_tech_stocks_data() -> pd.DataFrame:
+    # --------------------------------------------------------------
+    # 4. MÉTODO AUXILIAR PARA TECH STOCKS (privado)
+    # --------------------------------------------------------------
+    @staticmethod
+    def _fetch_tech_stocks_data() -> pd.DataFrame:
         try:
             data = yf.download(TECH_TICKERS, period="3y", progress=False)
             if not data.empty:
                 if isinstance(data.columns, pd.MultiIndex):
-                    df_close = data["Close"]
+                    return data["Close"].ffill().dropna()
                 else:
-                    df_close = data
-                return df_close.ffill().dropna()
+                    return data.ffill().dropna()
         except Exception as e:
             logging.error(f"Erro ao buscar ações tech: {e}")
-            
         return pd.DataFrame()
+
+    # --------------------------------------------------------------
+    # 5. AI Features (opcional, mantido para compatibilidade)
+    # --------------------------------------------------------------
+    @staticmethod
+    def fetch_ai_features():
+        """
+        Gera um CSV com features técnicas das principais tech stocks.
+        (Este método é mantido, mas não é chamado pela rotina diária).
+        """
+        df = DataFetcher._fetch_tech_stocks_data()
+        if df.empty:
+            logging.warning("Sem dados para gerar ai_features.csv")
+            return pd.DataFrame()
+
+        features = pd.DataFrame(index=df.index)
+        for ticker in df.columns:
+            features[f"{ticker}_Close"] = df[ticker]
+        returns = df.pct_change()
+        for ticker in df.columns:
+            features[f"{ticker}_Return"] = returns[ticker]
+            features[f"{ticker}_SMA_5"] = df[ticker].rolling(5).mean()
+            features[f"{ticker}_SMA_20"] = df[ticker].rolling(20).mean()
+            features[f"{ticker}_Vol_5"] = returns[ticker].rolling(5).std()
+        features["Tech_Avg"] = df.mean(axis=1)
+        features = features.dropna()
+        
+        os.makedirs("dados", exist_ok=True)
+        features.to_csv("dados/ai_features.csv")
+        logging.info("ai_features.csv atualizado (manual).")
+        return features
+
+    # ==============================================================
+    # ALIASES PARA COMPATIBILIDADE COM O main.py
+    # ==============================================================
+    fetch_tech_stocks_data = _fetch_tech_stocks_data   # mantém a chamada pública
+
+    # (Opcional) Se quiser manter também o antigo nome para GDP:
+    @staticmethod
+    def fetch_latest_us_gdp() -> float:
+        df = DataFetcher.fetch_macro_data()
+        if not df.empty:
+            return df["us_gdp_trillions"].iloc[0]
+        return GDP_FALLBACK_TRILLIONS

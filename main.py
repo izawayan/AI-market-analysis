@@ -15,10 +15,10 @@ def main():
     UIBuilder.injetar_css_customizado()
 
     with st.spinner("Buscando dados de mercado e indicadores macroeconômicos..."):
-        df_indices = DataFetcher.fetch_indices_last_12m()
-        gdp_trillions = DataFetcher.fetch_latest_us_gdp()
+        df_indices = DataFetcher.fetch_indices_data()
+        gdp_trillions = DataFetcher.fetch_macro_data()["us_gdp_trillions"].iloc[0]
         df_pe = DataFetcher.fetch_nasdaq_pe_5y()
-        df_tech = DataFetcher.fetch_tech_stocks_data()
+        df_tech = DataFetcher.fetch_tech_stocks_data()  # precisa do alias
 
     st.markdown("### 📊 Market Insights & AI Tracker")
     st.divider()

@@ -1,27 +1,29 @@
 # scripts/update_data.py
-import pandas as pd
-import yfinance as yf  # exemplo: baixar ações
+import sys
 import os
-from datetime import datetime
+import logging
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from src.data_fetcher import DataFetcher
 
 def main():
-    print("🔄 Iniciando atualização dos dados...")
+    print("🔄 Iniciando atualização diária dos dados dinâmicos...")
     
-    # Exemplo: baixar dados de um ativo (ex: PETR4.SA)
-    ticker = "PETR4.SA"
-    df = yf.download(ticker, period="1y", interval="1d")
-    df.to_csv("dados/petr4_daily.csv")
+    # 1. Índices (Wilshire 5000 e NASDAQ) - 5 anos
+    print("📊 Atualizando indices.csv...")
+    DataFetcher.fetch_indices_data()
     
-    # Exemplo: Atualizar indicadores macro (IPCA, SELIC, etc.)
-    # Aqui você colocaria sua lógica de scraping ou API
-    dados_macro = {
-        "data": [datetime.now().strftime("%Y-%m-%d")],
-        "selic": 0.1075,  # mock
-        "ipca": 0.0423
-    }
-    pd.DataFrame(dados_macro).to_csv("dados/macro.csv", index=False)
+    # 2. PIB dos EUA (último valor)
+    print("📊 Atualizando macro.csv...")
+    DataFetcher.fetch_macro_data()
     
-    print("✅ Dados atualizados com sucesso!")
+    # 3. NASDAQ P/E (5 anos)
+    print("📊 Atualizando nasdaq_pe.csv...")
+    DataFetcher.fetch_nasdaq_pe_5y()
+    
+    # Nota: ai_features.csv NÃO é atualizado automaticamente (dado estático)
+    
+    print("✅ Todos os dados dinâmicos atualizados com sucesso!")
 
 if __name__ == "__main__":
     main()
