@@ -1,26 +1,32 @@
 import os
+import io
 import numpy as np
 import pandas as pd
+import streamlit as st
 
 def carregar_parametros(csv_path=None):
     """
-    Lê o arquivo de configuração com distribuições triangulares.
-    Se csv_path não for fornecido, procura em '../dados/constantes_gestor.csv'
-    relativo à localização deste script.
+    Carrega as premissas do gestor para a simulação.
+    Tenta primeiro o arquivo local (desenvolvimento); se não existir,
+    recorre a st.secrets["constantes_gestor"] (produção).
     """
     if csv_path is None:
-        # Obtém o diretório onde este arquivo (monte_carlo.py) está → src/
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        # Sobe um nível (raiz do projeto) e entra em dados/
         csv_path = os.path.join(base_dir, '..', 'dados', 'constantes_gestor.csv')
-    
-    if not os.path.exists(csv_path):
-        raise FileNotFoundError(
-            f"Arquivo '{csv_path}' não encontrado.\n"
-            "Certifique-se de que o arquivo constantes_gestor.csv está na pasta 'dados'."
-        )
-    
-    df = pd.read_csv(csv_path)
+
+    # Tenta arquivo local (existente apenas em desenvolvimento)
+    if os.path.exists(csv_path):
+        df = pd.read_csv(csv_path)
+    else:
+        # Modo produção: lê dos segredos do Streamlit Cloud
+        try:
+            secret_content = st.secrets["constantes_gestor"]
+            df = pd.read_csv(io.StringIO(secret_content))
+        except KeyError:
+            raise FileNotFoundError(
+                f"Arquivo '{csv_path}' não encontrado e segredo 'constantes_gestor' não configurado."
+            )
+
     params = {}
     for _, row in df.iterrows():
         var = row["Variavel"].strip()
@@ -40,12 +46,10 @@ def executar_monte_carlo(params, n_simulacoes=10000, seed=7, modo='base', wacc_f
     if seed is not None:
         np.random.seed(seed)
 
-    # Parâmetros fixos do modelo
     receita_inicial = 1000.0          # milhões (ex.: $1bi)
     margem_fcl = 0.15                 # FCL como % da receita
     anos_projecao = 5
 
-    # Geração dos parâmetros estocásticos
     if modo == 'base':
         wacc = np.random.triangular(
             params["WACC"]["min"], params["WACC"]["moda"], params["WACC"]["max"], n_simulacoes
